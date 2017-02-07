@@ -57,6 +57,7 @@ string match_st=s2.substr(max(0,(j-i)),len1-i);
 int le2=match_st.length();
 cout<<match_st<<" this is matched"<<endl;
  max_align=max(max_align,solve(s1,len1,match_st,le2,dp));
+
 }
 
 }

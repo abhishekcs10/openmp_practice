@@ -4,13 +4,16 @@
 #include<iostream>
 #include<algorithm>
 #include<vector>
-#include<omp.h>
 using namespace std;
+
+/*
 #ifdef _OPENMP
-printf("Compiled with openmp support\n");
+	{printf("Compiled with openmp support\n");}
 #else
-printf("compiled with serial execution\n");
+{printf("compiled with serial execution\n");}
 #endif
+*/
+
 
 #define SCORE 1
 /*problem statement->
@@ -51,64 +54,64 @@ int main(){
 		vector<pair<int,int> > anchor_score;
 		int max_score=0,align=-1;
 		vector<string> anchor(len1-window+1,"");
-		int score,max_local_score=0;
+
 		int max_align=0;
+
 #pragma omp parallel num_threads(16)
-{
-#pragma omp for
 		{
+#pragma omp for
 				for(int i=0;i<len1-window+1;i++)
 				{
 						anchor[i]=(s1.substr(i,window));
-						cout<<anchor[i]<<endl;
+//						cout<<anchor[i]<<endl;
 
 				}
 
 		}
-}
-
-anchor_score.assign(len1-window+1,pair<int,int>(0,0));
 
 #pragma omp parallel
-{
-#pragma omp for private(score,max_local_score)
-		for (int i=0;i<anchor.size();i++)
 		{
-				for(int j=0;j<len2-window+1;j++)
+#pragma omp critical (anchor_score)
 				{
-						string text_mat=s2.substr(i,window);
-						int score=solve(anchor[j],window,text_mat,window);
-						if(score>=threshold)
+						for (int i=0;i<len2-window+1;i++)
 						{
-								if(j==0)
-								{anchor_score.first=j;
-								anchor_score.second=i;}
-								else if(score>=max_local_score){
-									anchor_score.first=j;
-									anchor_score.second=i;
+								for(int j=0;j<anchor.size();j++)
+								{
+										string text_mat=s2.substr(i,window);
+										int score=solve(anchor[j],window,text_mat,window);
+										if(score>=threshold)
+										{
+												anchor_score.push_back(make_pair(j,i));
+										}
 								}
 						}
 				}
 		}
 
-}
+#pragma omp parallel shared (max_score,align,max_align)
 
-		for(int i=0;i<anchor_score.size();i++)
 		{
-				string pat_mat=anchor[anchor_score[i].first];
-				int left=2*(anchor_score[i].first-0);
-				int right=2*(len1-anchor_score[i].first-window);
-				int total_len=left+right+window;
-				int starting_ind=max(0,anchor_score[i].second-left);
-				int ending_ind=min(anchor_score[i].second+window+right,len2-1);
-				int char_len=ending_ind-starting_ind+1;
-				string pat_text=s2.substr(starting_ind,char_len);
-				int score_curr=solve(s1,len1,pat_text,char_len);
-				if(score_curr>max_score)
+#pragma omp for schedule (dynamic) 		
+				for(int i=0;i<anchor_score.size();i++)
 				{
-						max_score=score_curr;
-						align=starting_ind;
-						max_align=char_len;
+						string pat_mat=anchor[anchor_score[i].first];
+						int left=2*(anchor_score[i].first-0);
+						int right=2*(len1-anchor_score[i].first-window);
+						int total_len=left+right+window;
+						int starting_ind=max(0,anchor_score[i].second-left);
+						int ending_ind=min(anchor_score[i].second+window+right,len2-1);
+						int char_len=ending_ind-starting_ind+1;
+						string pat_text=s2.substr(starting_ind,char_len);
+						int score_curr=solve(s1,len1,pat_text,char_len);
+#pragma omp critical 
+						{
+								if(score_curr>max_score)
+								{
+										max_score=score_curr;
+										align=starting_ind;
+										max_align=char_len;
+								}
+						}
 				}
 		}
 		cout<<max_score<<" "<<s2.substr(align,max_align)<<endl;
