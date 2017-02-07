@@ -35,13 +35,32 @@ return dp[len1][len2];
 
 
 int main(){
-string s1,s2;
+string s1,s2;//s1 is to be searched s2 is text
 cin>>s1>>s2;
 int len1=s1.length(),len2=s2.length();
-
+int window,threshold;
+cin>>window>>threshold;
 vector<vector<int> > dp(len1+2, vector<int> (len2+2,0));
+int max_align=0;
 
-int max_align=solve(s1,len1,s2,len2,dp);
+for(int i=0;i<len1-window-1;i++)
+{
+vector<vector<int> > dpx(window+2, vector<int> (window+2,0));
+
+for( int j=0;j<len2-window-1;j++)
+{
+string che1=s1.substr(i,window),che2=s2.substr(j,window);
+
+if (solve(che1,window,che2, window, dpx)>=threshold)
+{
+string match_st=s2.substr(max(0,(j-i)),len1-i);
+int le2=match_st.length();
+cout<<match_st<<" this is matched"<<endl;
+ max_align=max(max_align,solve(s1,len1,match_st,le2,dp));
+}
+
+}
+}
 cout<<max_align<<endl;
 	return 0;
 }
